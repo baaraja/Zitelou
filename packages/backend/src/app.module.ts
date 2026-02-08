@@ -6,6 +6,8 @@ import { UsersModule } from './users/users.module';
 import { MessagesModule } from './messages/messages.module';
 import { ContactsModule } from './contacts/contacts.module';
 import { DevicesModule } from './devices/devices.module';
+import { ConversationsModule } from './conversations/conversations.module';
+import { CryptoModule } from './crypto/crypto.module';
 
 @Module({
   imports: [
@@ -13,11 +15,13 @@ import { DevicesModule } from './devices/devices.module';
       isGlobal: true,
     }),
     PrismaModule,
+    CryptoModule,
     AuthModule,
     UsersModule,
-    MessagesModule,
-    ContactsModule,
     DevicesModule,
+    ContactsModule,
+    ConversationsModule,
+    MessagesModule,
   ],
 })
 export class AppModule {}
