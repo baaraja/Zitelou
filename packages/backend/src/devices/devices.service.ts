@@ -1,9 +1,33 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { randomBytes } from 'crypto';
 
 @Injectable()
 export class DevicesService {
   constructor(private prisma: PrismaService) {}
+
+  async create(userId: string, deviceName: string) {
+    const publicKey = randomBytes(32).toString('hex');
+    const privateKeyHash = randomBytes(32).toString('hex');
+    return this.prisma.device.upsert({
+      where: {
+        userId_deviceName: {
+          userId,
+          deviceName,
+        },
+      },
+      update: {
+        publicKey,
+        privateKeyHash,
+      },
+      create: {
+        userId,
+        deviceName,
+        publicKey,
+        privateKeyHash,
+      },
+    });
+  }
 
   async registerDevice(
     userId: string,
