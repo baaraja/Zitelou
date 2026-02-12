@@ -5,6 +5,58 @@ import { PrismaService } from '../prisma/prisma.service';
 export class MessagesService {
   constructor(private prisma: PrismaService) {}
 
+  async sendMessage(senderId: string, conversationId: string, encryptedContent: string) {
+    const conversation = await this.prisma.conversation.findUnique({
+      where: { id: conversationId },
+    });
+
+    const message = await this.prisma.message.create({
+      data: {
+        conversationId,
+        senderId,
+        encryptedContent,
+        isDelivered: true,
+        deliveredAt: new Date(),
+      },
+    });
+
+    if (conversation) {
+      const partnerConversation = await this.prisma.conversation.findFirst({
+        where: {
+          userId: conversation.contactId,
+          contactId: conversation.userId,
+        },
+      });
+
+      if (partnerConversation) {
+        await this.prisma.message.create({
+          data: {
+            conversationId: partnerConversation.id,
+            senderId,
+            encryptedContent,
+            isDelivered: true,
+            deliveredAt: new Date(),
+          },
+        });
+      }
+
+      await this.prisma.conversation.updateMany({
+        where: {
+          OR: [
+            { id: conversationId },
+            {
+              userId: conversation.contactId,
+              contactId: conversation.userId,
+            },
+          ],
+        },
+        data: { lastMessageAt: new Date() },
+      });
+    }
+
+    return message;
+  }
+
   async create(conversationId: string, senderId: string, encryptedContent: string) {
     return this.prisma.message.create({
       data: {

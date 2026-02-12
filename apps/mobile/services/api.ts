@@ -45,6 +45,8 @@ export const usersService = {
 
 export const conversationsService = {
   getConversations: () => apiClient.get('/conversations'),
+  createConversation: (contactId: string) =>
+    apiClient.post('/conversations/create', { contactId }),
   getConversation: (conversationId: string) =>
     apiClient.get(`/conversations/${conversationId}`),
   deleteConversation: (conversationId: string) =>
@@ -54,6 +56,8 @@ export const conversationsService = {
 };
 
 export const messagesService = {
+  sendMessage: (conversationId: string, encryptedContent: string) =>
+    apiClient.post('/messages/send', { conversationId, encryptedContent }),
   getMessages: (conversationId: string, limit?: number, offset?: number) =>
     apiClient.get(`/messages/conversation/${conversationId}`, {
       data: { limit, offset },

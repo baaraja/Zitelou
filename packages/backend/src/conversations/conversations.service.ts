@@ -5,14 +5,40 @@ import { PrismaService } from '../prisma/prisma.service';
 export class ConversationsService {
   constructor(private prisma: PrismaService) {}
 
-  async createConversation(userId: string, contactId: string) {
-    const existing = await this.prisma.conversation.findFirst({
+  async createOrGetConversation(userId: string, contactId: string) {
+    let conversation = await this.prisma.conversation.findFirst({
       where: { userId, contactId },
     });
-    if (existing) return existing;
-    return this.prisma.conversation.create({
-      data: { userId, contactId },
+    
+    if (!conversation) {
+      conversation = await this.prisma.conversation.create({
+        data: { userId, contactId },
+      });
+      
+      await this.prisma.conversation.create({
+        data: { userId: contactId, contactId: userId },
+      });
+    }
+    
+    return conversation;
+  }
+
+  async createConversation(userId: string, contactId: string) {
+    let conversation = await this.prisma.conversation.findFirst({
+      where: { userId, contactId },
     });
+    
+    if (!conversation) {
+      conversation = await this.prisma.conversation.create({
+        data: { userId, contactId },
+      });
+      
+      await this.prisma.conversation.create({
+        data: { userId: contactId, contactId: userId },
+      });
+    }
+    
+    return conversation;
   }
 
   async getUserConversations(userId: string) {
@@ -35,13 +61,45 @@ export class ConversationsService {
   }
 
   async updateLastMessage(conversationId: string) {
-    return this.prisma.conversation.update({
+    const conversation = await this.prisma.conversation.findUnique({
       where: { id: conversationId },
-      data: { lastMessageAt: new Date() },
     });
+    
+    if (conversation) {
+      await this.prisma.conversation.update({
+        where: { id: conversationId },
+        data: { lastMessageAt: new Date() },
+      });
+      
+      await this.prisma.conversation.updateMany({
+        where: { 
+          userId: conversation.contactId,
+          contactId: conversation.userId,
+        },
+        data: { lastMessageAt: new Date() },
+      });
+    }
   }
 
   async deleteConversation(conversationId: string) {
-    return this.prisma.conversation.delete({ where: { id: conversationId } });
+    const conversation = await this.prisma.conversation.findUnique({
+      where: { id: conversationId },
+    });
+    
+    if (conversation) {
+      await this.prisma.conversation.deleteMany({
+        where: {
+          OR: [
+            { id: conversationId },
+            {
+              userId: conversation.contactId,
+              contactId: conversation.userId,
+            },
+          ],
+        },
+      });
+    }
+    
+    return conversation;
   }
 }

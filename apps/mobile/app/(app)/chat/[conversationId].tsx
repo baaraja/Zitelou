@@ -32,48 +32,49 @@ export default function ChatScreen() {
   const [messageText, setMessageText] = useState('');
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
+  const [actualConversationId, setActualConversationId] = useState<string | null>(null);
   const flatListRef = useRef<FlatList>(null);
 
   useEffect(() => {
     if (conversationId) {
-      loadMessages();
-      markAsRead();
+      initializeConversation();
     }
   }, [conversationId]);
 
-  const loadMessages = async () => {
+  const initializeConversation = async () => {
     try {
-      const response = await messagesService.getMessages(conversationId || '');
-      setMessages(response.data);
+      setActualConversationId(conversationId || '');
+      await loadMessages(conversationId || '');
+      await conversationsService.markAsRead(conversationId || '');
     } catch (error) {
-      console.error('Failed to load messages:', error);
+      console.error('Failed to initialize conversation:', error);
     } finally {
       setLoading(false);
     }
   };
 
-  const markAsRead = async () => {
+  const loadMessages = async (convId: string) => {
     try {
-      if (conversationId) {
-        await conversationsService.markAsRead(conversationId);
-      }
+      const response = await messagesService.getMessages(convId);
+      setMessages(response.data);
     } catch (error) {
-      console.error('Failed to mark as read:', error);
+      console.error('Failed to load messages:', error);
     }
   };
 
   const handleSendMessage = async () => {
-    if (!messageText.trim() || !conversationId || !user) return;
+    if (!messageText.trim() || !actualConversationId || !user) return;
     setSending(true);
     try {
+      const response = await messagesService.sendMessage(actualConversationId, messageText);
       const newMessage: Message = {
-        id: Date.now().toString(),
-        conversationId,
+        id: response.data.id,
+        conversationId: actualConversationId,
         senderId: user.id,
-        encryptedContent: messageText,
-        isDelivered: false,
-        isRead: false,
-        createdAt: new Date().toISOString(),
+        encryptedContent: response.data.encryptedContent,
+        isDelivered: response.data.isDelivered,
+        isRead: response.data.isRead,
+        createdAt: response.data.createdAt,
       };
       setMessages((prev) => [...prev, newMessage]);
       setMessageText('');

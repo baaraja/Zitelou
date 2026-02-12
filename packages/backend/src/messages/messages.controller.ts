@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Delete, Param, Body, UseGuards, Request } from '@nestjs/common';
+import { Controller, Get, Post, Delete, Param, Body, Query, UseGuards, Request } from '@nestjs/common';
 import { MessagesService } from './messages.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 
@@ -7,15 +7,27 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 export class MessagesController {
   constructor(private messagesService: MessagesService) {}
 
+  @Post('send')
+  async sendMessage(
+    @Request() req: any,
+    @Body() dto: { conversationId: string; encryptedContent: string },
+  ) {
+    return this.messagesService.sendMessage(
+      req.user.id,
+      dto.conversationId,
+      dto.encryptedContent,
+    );
+  }
+
   @Get('conversation/:conversationId')
   async getConversationMessages(
     @Param('conversationId') conversationId: string,
-    @Body() dto: { limit?: number; offset?: number },
+    @Query() dto: { limit?: number; offset?: number },
   ) {
     return this.messagesService.getConversationMessages(
       conversationId,
-      dto.limit || 50,
-      dto.offset || 0,
+      dto.limit ? parseInt(dto.limit as any) : 50,
+      dto.offset ? parseInt(dto.offset as any) : 0,
     );
   }
 
