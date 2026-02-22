@@ -1,17 +1,28 @@
-import { Controller, Get, Post, Delete, Param, Body, Query, UseGuards, Request } from '@nestjs/common';
+import { Controller, Get, Post, Delete, Param, Body, Query, UseGuards, Request, BadRequestException } from '@nestjs/common';
 import { MessagesService } from './messages.service';
+import { ConversationsService } from '../conversations/conversations.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 
 @Controller('messages')
 @UseGuards(JwtAuthGuard)
 export class MessagesController {
-  constructor(private messagesService: MessagesService) {}
+  constructor(
+    private messagesService: MessagesService,
+    private conversationsService: ConversationsService,
+  ) {}
 
   @Post('send')
   async sendMessage(
     @Request() req: any,
-    @Body() dto: { conversationId: string; encryptedContent: string },
+    @Body() dto: { conversationId?: string; contactId?: string; encryptedContent: string },
   ) {
+    if (!dto.conversationId && dto.contactId) {
+      const conversation = await this.conversationsService.createOrGetConversation(req.user.id, dto.contactId);
+      dto.conversationId = conversation.id;
+    }
+    if (!dto.conversationId) {
+      throw new BadRequestException('conversationId or contactId is required');
+    }
     return this.messagesService.sendMessage(
       req.user.id,
       dto.conversationId,

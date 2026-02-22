@@ -17,7 +17,8 @@ model User {
   devices   Device[]
   contacts  Contact[] @relation("UserContacts")
   contactedBy Contact[] @relation("UserToContact")
-  conversations Conversation[]
+  conversationsAsUser Conversation[] @relation("ConversationUser")
+  conversationsAsContact Conversation[] @relation("ConversationContact")
   messages  Message[]
   blocklist BlockList[]
   whitelist WhiteList[]
@@ -54,8 +55,9 @@ model Contact {
 model Conversation {
   id        String    @id @default(cuid())
   userId    String
-  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user      User      @relation("ConversationUser", fields: [userId], references: [id], onDelete: Cascade)
   contactId String
+  contact   User      @relation("ConversationContact", fields: [contactId], references: [id], onDelete: Cascade)
   lastMessageAt DateTime?
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt

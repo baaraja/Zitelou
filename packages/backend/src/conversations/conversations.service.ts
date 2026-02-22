@@ -6,20 +6,23 @@ export class ConversationsService {
   constructor(private prisma: PrismaService) {}
 
   async createOrGetConversation(userId: string, contactId: string) {
+    const contactExists = await this.prisma.user.findUnique({
+      where: { id: contactId },
+    });
+    if (!contactExists) {
+      throw new NotFoundException('Contact not found');
+    }
     let conversation = await this.prisma.conversation.findFirst({
       where: { userId, contactId },
     });
-    
     if (!conversation) {
       conversation = await this.prisma.conversation.create({
         data: { userId, contactId },
       });
-      
       await this.prisma.conversation.create({
         data: { userId: contactId, contactId: userId },
       });
     }
-    
     return conversation;
   }
 

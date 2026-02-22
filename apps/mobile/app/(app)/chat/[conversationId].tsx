@@ -25,7 +25,7 @@ interface Message {
 }
 
 export default function ChatScreen() {
-  const { conversationId } = useLocalSearchParams<{ conversationId: string }>();
+  const { conversationId } = useLocalSearchParams<{ conversationId?: string }>();
   const router = useRouter();
   const { user } = useAuth();
   const [messages, setMessages] = useState<Message[]>([]);
@@ -33,6 +33,7 @@ export default function ChatScreen() {
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
   const [actualConversationId, setActualConversationId] = useState<string | null>(null);
+  const [contactIdForNewChat, setContactIdForNewChat] = useState<string | null>(null);
   const flatListRef = useRef<FlatList>(null);
 
   useEffect(() => {
@@ -43,16 +44,34 @@ export default function ChatScreen() {
 
   const initializeConversation = async () => {
     try {
-      setActualConversationId(conversationId || '');
-      await loadMessages(conversationId || '');
-      await conversationsService.markAsRead(conversationId || '');
+      if (conversationId?.length === 25) {
+        setContactIdForNewChat(conversationId);
+        try {
+          const conversations = await conversationsService.getConversations();
+          const existingConv = conversations.data.find((c: any) => c.contactId === conversationId);
+          if (existingConv) {
+            setActualConversationId(existingConv.id);
+            setContactIdForNewChat(null);
+            await loadMessages(existingConv.id);
+            await conversationsService.markAsRead(existingConv.id);
+            setLoading(false);
+            return;
+          }
+        } catch (err) {
+          console.error('Failed to fetch conversations:', err);
+        }
+        setLoading(false);
+      } else {
+        setActualConversationId(conversationId || '');
+        await loadMessages(conversationId || '');
+        await conversationsService.markAsRead(conversationId || '');
+        setLoading(false);
+      }
     } catch (error) {
       console.error('Failed to initialize conversation:', error);
-    } finally {
       setLoading(false);
     }
   };
-
   const loadMessages = async (convId: string) => {
     try {
       const response = await messagesService.getMessages(convId);
@@ -63,20 +82,29 @@ export default function ChatScreen() {
   };
 
   const handleSendMessage = async () => {
-    if (!messageText.trim() || !actualConversationId || !user) return;
+    if (!messageText.trim() || (!actualConversationId && !contactIdForNewChat) || !user) {
+      return;
+    }
     setSending(true);
     try {
-      const response = await messagesService.sendMessage(actualConversationId, messageText);
+      const response = await messagesService.sendMessage(messageText, actualConversationId || undefined, contactIdForNewChat || undefined);
       const newMessage: Message = {
         id: response.data.id,
-        conversationId: actualConversationId,
+        conversationId: response.data.conversationId,
         senderId: user.id,
         encryptedContent: response.data.encryptedContent,
         isDelivered: response.data.isDelivered,
         isRead: response.data.isRead,
         createdAt: response.data.createdAt,
       };
-      setMessages((prev) => [...prev, newMessage]);
+      if (contactIdForNewChat && !actualConversationId) {
+        const newConvId = response.data.conversationId;
+        setActualConversationId(newConvId);
+        setContactIdForNewChat(null);
+        await loadMessages(newConvId);
+      } else {
+        setMessages((prev) => [...prev, newMessage]);
+      }
       setMessageText('');
       flatListRef.current?.scrollToEnd({ animated: true });
     } catch (error) {

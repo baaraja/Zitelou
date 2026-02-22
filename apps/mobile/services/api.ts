@@ -56,8 +56,8 @@ export const conversationsService = {
 };
 
 export const messagesService = {
-  sendMessage: (conversationId: string, encryptedContent: string) =>
-    apiClient.post('/messages/send', { conversationId, encryptedContent }),
+  sendMessage: (encryptedContent: string, conversationId?: string, contactId?: string) =>
+    apiClient.post('/messages/send', { conversationId, contactId, encryptedContent }),
   getMessages: (conversationId: string, limit?: number, offset?: number) =>
     apiClient.get(`/messages/conversation/${conversationId}`, {
       data: { limit, offset },

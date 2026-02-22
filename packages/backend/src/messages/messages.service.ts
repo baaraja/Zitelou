@@ -9,7 +9,17 @@ export class MessagesService {
     const conversation = await this.prisma.conversation.findUnique({
       where: { id: conversationId },
     });
-
+    if (!conversation) {
+      throw new NotFoundException('Conversation not found');
+    }
+    const contactExists = await this.prisma.contact.findFirst({
+      where: { userId: conversation.contactId, contactId: senderId },
+    });
+    if (!contactExists) {
+      await this.prisma.contact.create({
+        data: { userId: conversation.contactId, contactId: senderId },
+      });
+    }
     const message = await this.prisma.message.create({
       data: {
         conversationId,
@@ -19,41 +29,35 @@ export class MessagesService {
         deliveredAt: new Date(),
       },
     });
-
-    if (conversation) {
-      const partnerConversation = await this.prisma.conversation.findFirst({
-        where: {
-          userId: conversation.contactId,
-          contactId: conversation.userId,
+    const partnerConversation = await this.prisma.conversation.findFirst({
+      where: {
+        userId: conversation.contactId,
+        contactId: conversation.userId,
+      },
+    });
+    if (partnerConversation) {
+      await this.prisma.message.create({
+        data: {
+          conversationId: partnerConversation.id,
+          senderId,
+          encryptedContent,
+          isDelivered: true,
+          deliveredAt: new Date(),
         },
-      });
-
-      if (partnerConversation) {
-        await this.prisma.message.create({
-          data: {
-            conversationId: partnerConversation.id,
-            senderId,
-            encryptedContent,
-            isDelivered: true,
-            deliveredAt: new Date(),
-          },
-        });
-      }
-
-      await this.prisma.conversation.updateMany({
-        where: {
-          OR: [
-            { id: conversationId },
-            {
-              userId: conversation.contactId,
-              contactId: conversation.userId,
-            },
-          ],
-        },
-        data: { lastMessageAt: new Date() },
       });
     }
-
+    await this.prisma.conversation.updateMany({
+      where: {
+        OR: [
+          { id: conversationId },
+          {
+            userId: conversation.contactId,
+            contactId: conversation.userId,
+          },
+        ],
+      },
+      data: { lastMessageAt: new Date() },
+    });
     return message;
   }
 
