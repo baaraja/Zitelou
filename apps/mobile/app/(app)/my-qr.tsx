@@ -1,24 +1,15 @@
-import { StyleSheet, View, ActivityIndicator, Image } from 'react-native';
+import { StyleSheet, View, ActivityIndicator } from 'react-native';
 import { useEffect, useState } from 'react';
-import QRCode from 'qrcode';
+import QRCode from 'react-native-qrcode-svg';
 import { useAuth } from '@/context/AuthContext';
 
 export default function MyQRScreen() {
   const { user } = useAuth();
-  const [qrCode, setQrCode] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (user?.id) {
-      QRCode.toDataURL(user.id, { width: 300 })
-        .then((url) => {
-          setQrCode(url);
-          setLoading(false);
-        })
-        .catch((err) => {
-          console.error('Error generating QR code:', err);
-          setLoading(false);
-        });
+      setLoading(false);
     }
   }, [user?.id]);
 
@@ -32,7 +23,7 @@ export default function MyQRScreen() {
 
   return (
     <View style={styles.container}>
-      {qrCode && <Image source={{ uri: qrCode }} style={styles.qrCode} />}
+      {user?.id && <QRCode value={user.id} size={300} />}
     </View>
   );
 }
@@ -43,9 +34,5 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: '#fff',
-  },
-  qrCode: {
-    width: 300,
-    height: 300,
   },
 });
