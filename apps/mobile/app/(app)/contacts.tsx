@@ -130,16 +130,32 @@ export default function ContactsScreen() {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Mes Contacts</Text>
+      <View style={styles.header}>
+        <Text style={styles.title}>Mes Contacts</Text>
+        <TouchableOpacity
+          style={styles.qrButton}
+          onPress={() => router.push('/(app)/my-qr')}
+        >
+          <Text style={styles.qrButtonText}>Mon QR</Text>
+        </TouchableOpacity>
+      </View>
       {contacts.length === 0 ? (
         <View style={styles.emptyContainer}>
           <Text style={styles.emptyText}>Aucun contact</Text>
-          <TouchableOpacity
-            style={styles.addButton}
-            onPress={() => setShowAddModal(true)}
-          >
-            <Text style={styles.addButtonText}>+ Ajouter un contact</Text>
-          </TouchableOpacity>
+          <View style={styles.buttonRow}>
+            <TouchableOpacity
+              style={styles.addButton}
+              onPress={() => setShowAddModal(true)}
+            >
+              <Text style={styles.addButtonText}>Par ID</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.addButton}
+              onPress={() => router.push('/(app)/scan-qr')}
+            >
+              <Text style={styles.addButtonText}>Par QR</Text>
+            </TouchableOpacity>
+          </View>
         </View>
       ) : (
         <>
@@ -151,12 +167,20 @@ export default function ContactsScreen() {
             refreshing={refreshing}
             onRefresh={handleRefresh}
           />
-          <TouchableOpacity
-            style={styles.floatingButton}
-            onPress={() => setShowAddModal(true)}
-          >
-            <Text style={styles.floatingButtonText}>+</Text>
-          </TouchableOpacity>
+          <View style={styles.floatingButtonRow}>
+            <TouchableOpacity
+              style={styles.floatingButton}
+              onPress={() => setShowAddModal(true)}
+            >
+              <Text style={styles.floatingButtonText}>ID</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.floatingButton}
+              onPress={() => router.push('/(app)/scan-qr')}
+            >
+              <Text style={styles.floatingButtonText}>QR</Text>
+            </TouchableOpacity>
+          </View>
         </>
       )}
       <Modal
@@ -209,18 +233,34 @@ const styles = StyleSheet.create({
     backgroundColor: '#f0f9ff',
     paddingTop: 20,
   },
-  centerContainer: {
-    flex: 1,
-    justifyContent: 'center',
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
-    backgroundColor: '#f0f9ff',
+    paddingHorizontal: 20,
+    marginBottom: 16,
   },
   title: {
     fontSize: 28,
     fontWeight: 'bold',
     color: '#0ea5e9',
-    marginBottom: 16,
-    paddingHorizontal: 20,
+  },
+  qrButton: {
+    backgroundColor: '#8b5cf6',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 6,
+  },
+  qrButtonText: {
+    color: '#fff',
+    fontWeight: '600',
+    fontSize: 14,
+  },
+  centerContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#f0f9ff',
   },
   contactItem: {
     flexDirection: 'row',
@@ -287,6 +327,10 @@ const styles = StyleSheet.create({
     color: '#64748b',
     marginBottom: 20,
   },
+  buttonRow: {
+    flexDirection: 'row',
+    gap: 12,
+  },
   addButton: {
     backgroundColor: '#0ea5e9',
     borderRadius: 12,
@@ -298,10 +342,14 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
   },
-  floatingButton: {
+  floatingButtonRow: {
     position: 'absolute',
     bottom: 100,
     right: 20,
+    flexDirection: 'row',
+    gap: 12,
+  },
+  floatingButton: {
     width: 56,
     height: 56,
     borderRadius: 28,
@@ -316,8 +364,8 @@ const styles = StyleSheet.create({
   },
   floatingButtonText: {
     color: '#fff',
-    fontSize: 32,
-    fontWeight: '300',
+    fontSize: 20,
+    fontWeight: 'bold',
   },
   modalContainer: {
     flex: 1,
