@@ -9,7 +9,6 @@ export default function AppLayout() {
     >
       <Stack.Screen name="index" />
       <Stack.Screen name="profile" />
-      <Stack.Screen name="chat/[conversationId]" />
       <Stack.Screen name="contacts" />
     </Stack>
   );

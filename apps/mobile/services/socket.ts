@@ -3,7 +3,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const SOCKET_URL = process.env.EXPO_PUBLIC_SOCKET_URL || 'http://localhost:3000';
 
-let socket: Socket | null = null;
+export let socket: Socket | null = null;
 
 export const initSocket = async () => {
   const userId = await AsyncStorage.getItem('userId');
@@ -17,16 +17,13 @@ export const initSocket = async () => {
       reconnectionDelayMax: 5000,
       reconnectionAttempts: 5,
     });
-
     socket.on('connect', () => {
       console.log('Socket connected');
     });
-
     socket.on('disconnect', () => {
       console.log('Socket disconnected');
     });
   }
-
   return socket;
 };
 

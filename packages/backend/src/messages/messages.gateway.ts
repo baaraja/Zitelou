@@ -102,4 +102,26 @@ export class MessagesGateway
     const message = await this.messagesService.markAsRead(payload.messageId);
     this.server.emit('message_read', message);
   }
+
+  @SubscribeMessage('call-start')
+  handleCallStart(
+    @ConnectedSocket() socket: Socket,
+    @MessageBody() payload: { conversationId: string; from: string; fromUsername: string },
+  ) {
+    socket.to(`conversation:${payload.conversationId}`).emit('incoming-call', {
+      conversationId: payload.conversationId,
+      from: payload.from,
+      fromUsername: payload.fromUsername,
+    });
+  }
+
+  @SubscribeMessage('call-ended')
+  handleCallEnded(
+    @ConnectedSocket() socket: Socket,
+    @MessageBody() payload: { conversationId: string },
+  ) {
+    socket.to(`conversation:${payload.conversationId}`).emit('call-ended', {
+      conversationId: payload.conversationId,
+    });
+  }
 }

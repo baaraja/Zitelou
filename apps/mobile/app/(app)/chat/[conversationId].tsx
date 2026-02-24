@@ -9,10 +9,12 @@ import {
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
+  Modal,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { messagesService, conversationsService } from '@/services/api';
 import { useAuth } from '@/context/AuthContext';
+import { socket } from '@/services/socket';
 
 interface Message {
   id: string;
@@ -22,6 +24,12 @@ interface Message {
   isDelivered: boolean;
   isRead: boolean;
   createdAt: string;
+}
+
+interface IncomingCall {
+  conversationId: string;
+  from: string;
+  fromUsername: string;
 }
 
 export default function ChatScreen() {
@@ -34,6 +42,7 @@ export default function ChatScreen() {
   const [sending, setSending] = useState(false);
   const [actualConversationId, setActualConversationId] = useState<string | null>(null);
   const [contactIdForNewChat, setContactIdForNewChat] = useState<string | null>(null);
+  const [incomingCall, setIncomingCall] = useState<IncomingCall | null>(null);
   const flatListRef = useRef<FlatList>(null);
 
   useEffect(() => {
@@ -41,6 +50,31 @@ export default function ChatScreen() {
       initializeConversation();
     }
   }, [conversationId]);
+
+  useEffect(() => {
+    if (!socket) return;
+    if (actualConversationId) {
+      socket.emit('join_conversation', {
+        conversationId: actualConversationId,
+      });
+    }
+    socket.on('incoming-call', (data: IncomingCall) => {
+      if (data.conversationId === actualConversationId || data.conversationId === conversationId) {
+        setIncomingCall(data);
+      }
+    });
+    socket.on('call-ended', (data: any) => {
+      if (data.conversationId === actualConversationId || data.conversationId === conversationId) {
+        setIncomingCall(null);
+      }
+    });
+    return () => {
+      if (socket) {
+        socket.off('incoming-call');
+        socket.off('call-ended');
+      }
+    };
+  }, [actualConversationId, conversationId]);
 
   const initializeConversation = async () => {
     try {
@@ -72,6 +106,7 @@ export default function ChatScreen() {
       setLoading(false);
     }
   };
+
   const loadMessages = async (convId: string) => {
     try {
       const response = await messagesService.getMessages(convId);
@@ -112,6 +147,31 @@ export default function ChatScreen() {
     } finally {
       setSending(false);
     }
+  };
+
+  const handleVideoCall = () => {
+    if (actualConversationId) {
+      router.push({
+        pathname: '/(app)/video-call',
+        params: { conversationId: actualConversationId },
+      });
+    } else {
+      alert('Please send a message first to establish the conversation');
+    }
+  };
+
+  const handleAcceptCall = () => {
+    if (incomingCall) {
+      setIncomingCall(null);
+      router.push({
+        pathname: '/(app)/video-call',
+        params: { conversationId: incomingCall.conversationId },
+      });
+    }
+  };
+
+  const handleRejectCall = () => {
+    setIncomingCall(null);
   };
 
   const renderMessage = ({ item }: { item: Message }) => {
@@ -175,7 +235,9 @@ export default function ChatScreen() {
           <Text style={styles.backButton}>‹</Text>
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Chat</Text>
-        <View style={styles.headerSpacer} />
+        <TouchableOpacity onPress={handleVideoCall} disabled={!actualConversationId}>
+          <Text style={styles.videoCallButton}>📞</Text>
+        </TouchableOpacity>
       </View>
       <FlatList
         ref={flatListRef}
@@ -207,6 +269,33 @@ export default function ChatScreen() {
           <Text style={styles.sendButtonText}>➤</Text>
         </TouchableOpacity>
       </View>
+
+      <Modal
+        visible={incomingCall !== null}
+        transparent
+        animationType="fade"
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.incomingCallCard}>
+            <Text style={styles.incomingCallTitle}>Incoming Call</Text>
+            <Text style={styles.incomingCallName}>{incomingCall?.fromUsername}</Text>
+            <View style={styles.callButtonsContainer}>
+              <TouchableOpacity
+                style={[styles.callButton, styles.acceptButton]}
+                onPress={handleAcceptCall}
+              >
+                <Text style={styles.callButtonText}>Accept</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.callButton, styles.rejectButton]}
+                onPress={handleRejectCall}
+              >
+                <Text style={styles.callButtonText}>Reject</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </KeyboardAvoidingView>
   );
 }
@@ -241,6 +330,10 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 18,
     fontWeight: '600',
+    color: '#0ea5e9',
+  },
+  videoCallButton: {
+    fontSize: 24,
     color: '#0ea5e9',
   },
   headerSpacer: {
@@ -330,5 +423,52 @@ const styles = StyleSheet.create({
   sendButtonText: {
     color: '#fff',
     fontSize: 20,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  incomingCallCard: {
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    padding: 24,
+    alignItems: 'center',
+    minWidth: 300,
+  },
+  incomingCallTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#1e293b',
+    marginBottom: 8,
+  },
+  incomingCallName: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#0ea5e9',
+    marginBottom: 24,
+  },
+  callButtonsContainer: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  callButton: {
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 8,
+    minWidth: 100,
+    alignItems: 'center',
+  },
+  acceptButton: {
+    backgroundColor: '#10b981',
+  },
+  rejectButton: {
+    backgroundColor: '#ef4444',
+  },
+  callButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
   },
 });

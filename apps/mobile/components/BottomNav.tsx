@@ -11,13 +11,6 @@ export default function BottomNav() {
   return (
     <View style={styles.navbar}>
       <TouchableOpacity
-        style={[styles.navItem, isActive('index') && styles.navItemActive]}
-        onPress={() => router.push('/(app)')}
-      >
-        <Text style={styles.navIcon}>💬</Text>
-        <Text style={[styles.navLabel, isActive('index') && styles.navLabelActive]}>Messages</Text>
-      </TouchableOpacity>
-      <TouchableOpacity
         style={[styles.navItem, isActive('contacts') && styles.navItemActive]}
         onPress={() => router.push('/(app)/contacts')}
       >
